@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Check, Shield, ChevronDown } from 'lucide-react'
+import { Check, Shield, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Progress } from "@/components/ui/progress"
+import { Textarea } from "@/components/ui/textarea"
 
 const policies = [
     { id: 1, name: "Standard Policy" },
@@ -67,6 +68,8 @@ const policyClauses = {
 export default function Component() {
     const [selectedPolicy, setSelectedPolicy] = useState(policies[0])
     const [checkedItems, setCheckedItems] = useState<number[]>([])
+    const [userPolicy, setUserPolicy] = useState('')
+    const [isAnalyzing, setIsAnalyzing] = useState(false)
 
     const handlePolicyChange = (policyId: number) => {
         const newPolicy = policies.find(p => p.id === policyId)
@@ -84,6 +87,35 @@ export default function Component() {
     }
 
     const progressPercentage = (checkedItems.length / gdprCriteria.length) * 100
+
+    const handleAnalyzePolicy = async () => {
+        if (!userPolicy.trim()) return
+
+        setIsAnalyzing(true)
+        try {
+            const response = await fetch('/api/analyze', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ policyText: userPolicy })
+            })
+
+            if (!response.ok) {
+                throw new Error('Analysis failed')
+            }
+
+            const data = await response.json()
+            console.log('Analysis complete:', data)
+
+            // Handle the results here (e.g., update UI, store in state, etc.)
+
+        } catch (error) {
+            console.error('Failed to analyze policy:', error)
+        } finally {
+            setIsAnalyzing(false)
+        }
+    }
 
     return (
         <div className="container mx-auto p-4 bg-gradient-to-b from-gray-50 to-white min-h-screen">
@@ -116,9 +148,9 @@ export default function Component() {
                         {checkedItems.length} of {gdprCriteria.length} criteria met
                     </p>
                 </div>
-                <div className="flex flex-col md:flex-row gap-6">
+                <div className="flex flex-col md:flex-row gap-6 mb-6">
                     <div className="w-full md:w-1/2">
-                        <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border bg-white p-4">
+                        <ScrollArea className="h-[500px] rounded-lg border bg-white p-4">
                             {gdprCriteria.map((criteria) => (
                                 <div key={criteria.id} className="flex items-center space-x-2 mb-4">
                                     <Checkbox
@@ -138,7 +170,7 @@ export default function Component() {
                         </ScrollArea>
                     </div>
                     <div className="w-full md:w-1/2">
-                        <ScrollArea className="h-[calc(100vh-300px)] rounded-lg border bg-white p-4">
+                        <ScrollArea className="h-[500px] rounded-lg border bg-white p-4">
                             <h2 className="text-xl font-semibold mb-4 text-primary">Policy Clauses</h2>
                             {checkedItems.length === 0 ? (
                                 <p className="text-gray-500 italic">Select criteria to view corresponding policy clauses.</p>
@@ -154,6 +186,29 @@ export default function Component() {
                             )}
                         </ScrollArea>
                     </div>
+                </div>
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                    <h2 className="text-xl font-semibold mb-4 text-primary">Your Privacy Policy</h2>
+                    <Textarea
+                        placeholder="Paste your privacy policy here for analysis..."
+                        value={userPolicy}
+                        onChange={(e) => setUserPolicy(e.target.value)}
+                        className="min-h-[200px] mb-4"
+                    />
+                    <Button
+                        onClick={handleAnalyzePolicy}
+                        disabled={isAnalyzing || !userPolicy.trim()}
+                        className="w-full"
+                    >
+                        {isAnalyzing ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Analyzing...
+                            </>
+                        ) : (
+                            'Analyze Policy'
+                        )}
+                    </Button>
                 </div>
             </div>
         </div>
