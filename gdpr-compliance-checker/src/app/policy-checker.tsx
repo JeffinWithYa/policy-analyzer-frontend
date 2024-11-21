@@ -65,11 +65,41 @@ const policyClauses = {
     },
 }
 
+const labelColors: Record<string, string> = {
+    "Data Retention": "bg-blue-100",
+    "Data Security": "bg-green-100",
+    "Do Not Track": "bg-purple-100",
+    "First Party Collection/Use": "bg-yellow-100",
+    "International and Specific Audiences": "bg-pink-100",
+    "Other": "bg-gray-100",
+    "Policy Change": "bg-orange-100",
+    "Third Party Sharing/Collection": "bg-red-100",
+    "User Access, Edit, and Deletion": "bg-indigo-100",
+    "User Choice/Control": "bg-teal-100"
+}
+
+interface AnalysisResult {
+    type: string;
+    content: string;
+    human_annotations: {
+        [key: string]: {
+            [key: string]: boolean;
+        };
+    };
+    tool_calls: any[];
+    tool_call_id: string | null;
+    run_id: string;
+    response_metadata: any;
+    custom_data: any;
+    privacy_analysis: any;
+}
+
 export default function Component() {
     const [selectedPolicy, setSelectedPolicy] = useState(policies[0])
     const [checkedItems, setCheckedItems] = useState<number[]>([])
     const [userPolicy, setUserPolicy] = useState('')
     const [isAnalyzing, setIsAnalyzing] = useState(false)
+    const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
 
     const handlePolicyChange = (policyId: number) => {
         const newPolicy = policies.find(p => p.id === policyId)
@@ -107,14 +137,26 @@ export default function Component() {
 
             const data = await response.json()
             console.log('Analysis complete:', data)
-
-            // Handle the results here (e.g., update UI, store in state, etc.)
+            console.log('Analysis results structure:', JSON.stringify(data.analysis, null, 2))
+            setAnalysisResults(data.analysis)
 
         } catch (error) {
             console.error('Failed to analyze policy:', error)
         } finally {
             setIsAnalyzing(false)
         }
+    }
+
+    const getTopLevelLabel = (category: { [key: string]: { [key: string]: string } } | undefined | null) => {
+        if (!category) {
+            return "Other"
+        }
+
+        const topLevel = Object.keys(category)[0]
+        if (topLevel && labelColors[topLevel]) {
+            return topLevel
+        }
+        return "Other"
     }
 
     return (
@@ -210,6 +252,40 @@ export default function Component() {
                         )}
                     </Button>
                 </div>
+                {analysisResults.length > 0 && (
+                    <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                        <h2 className="text-xl font-semibold mb-4 text-primary">Analysis Results</h2>
+                        <div className="space-y-2">
+                            {analysisResults.map((result, index) => {
+                                const parsedContent = JSON.parse(result.content);
+                                const topLabel = getTopLevelLabel(parsedContent.category);
+                                return (
+                                    <div
+                                        key={index}
+                                        className={cn(
+                                            "p-3 rounded-md",
+                                            labelColors[topLabel] || "bg-gray-100"
+                                        )}
+                                    >
+                                        <div className="text-sm text-gray-700">{result.segment_text}</div>
+                                        <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                                            <span>{topLabel}</span>
+                                            <span className="italic">{parsedContent.explanation}</span>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                        <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                            {Object.entries(labelColors).map(([label, color]) => (
+                                <div key={label} className="flex items-center text-xs">
+                                    <div className={cn("w-4 h-4 rounded mr-2", color)} />
+                                    {label}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )
