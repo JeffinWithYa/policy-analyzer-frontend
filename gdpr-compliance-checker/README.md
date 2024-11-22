@@ -1,8 +1,26 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Privacy Policy Analyzer & GDPR Compliance Checker
+
+A modern web application built with Next.js that helps analyze privacy policies and verify GDPR compliance. This project serves as the frontend interface for the [Privacy Policy Analyzer Backend](https://github.com/JeffinWithYa/policy-analyzer).
+
+## Features
+
+- **Privacy Policy Annotation**: Automatically analyzes and annotates privacy policy text to identify key sections and their purposes
+- **GDPR Compliance Check**: Verifies compliance against 11 mandatory GDPR requirements
+- **Visual Analysis**: Color-coded categorization of policy segments for easy understanding
+- **Compliance Progress Tracking**: Visual progress indicator for GDPR requirement completion
+- **Interactive UI**: Modern, responsive interface built with Tailwind CSS and shadcn/ui
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 18+ 
+- npm or yarn
+- Running instance of the [backend service](https://github.com/JeffinWithYa/policy-analyzer)
+
+### Installation
+
+1. Clone the repository:
 
 ```bash
 npm run dev
