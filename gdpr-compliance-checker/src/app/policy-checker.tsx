@@ -232,73 +232,38 @@ export default function Component() {
     return (
         <div className="container mx-auto p-4 bg-gradient-to-b from-gray-50 to-white min-h-screen">
             <div className="max-w-4xl mx-auto">
-                <div className="flex items-center justify-center mb-8">
+                {/* Title Section */}
+                <div className="flex items-center justify-center mb-4">
                     <Shield className="w-10 h-10 text-primary mr-2" />
                     <h1 className="text-3xl font-bold text-primary">GDPR Policy Compliance Checker</h1>
                 </div>
-                <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full mb-4">
-                                {selectedPolicy.name}
-                                <ChevronDown className="ml-2 h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="w-full">
-                            {policies.map((policy) => (
-                                <DropdownMenuItem
-                                    key={policy.id}
-                                    onSelect={() => handlePolicyChange(policy.id)}
-                                >
-                                    {policy.name}
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                    <Progress value={progressPercentage} className="mb-4" />
-                    <p className="text-sm text-gray-600 mb-4">
-                        {checkedItems.length} of {GDPR_REQUIREMENTS.length} criteria met
+
+                {/* New Description Section */}
+                <div className="text-center mb-8 max-w-2xl mx-auto">
+                    <p className="text-gray-600 mb-4">
+                        This tool helps you ensure your privacy policy complies with GDPR requirements by:
                     </p>
-                </div>
-                <div className="flex flex-col md:flex-row gap-6 mb-6">
-                    <div className="w-full md:w-1/2">
-                        <ScrollArea className="h-[500px] rounded-lg border bg-white p-4">
-                            {GDPR_REQUIREMENTS.map((criteria) => (
-                                <div key={criteria.id} className="flex items-center space-x-2 mb-4">
-                                    <Checkbox
-                                        id={`checkbox-${criteria.id}`}
-                                        checked={checkedItems.includes(criteria.id)}
-                                        disabled={true}
-                                        className="border-primary"
-                                    />
-                                    <label
-                                        htmlFor={`checkbox-${criteria.id}`}
-                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                    >
-                                        {criteria.label}
-                                    </label>
-                                </div>
-                            ))}
-                        </ScrollArea>
-                    </div>
-                    <div className="w-full md:w-1/2">
-                        <ScrollArea className="h-[500px] rounded-lg border bg-white p-4">
-                            <h2 className="text-xl font-semibold mb-4 text-primary">Policy Clauses</h2>
-                            {checkedItems.length === 0 ? (
-                                <p className="text-gray-500 italic">Select criteria to view corresponding policy clauses.</p>
-                            ) : (
-                                checkedItems.map((criteriaId) => (
-                                    <div key={criteriaId} className="mb-6 last:mb-0">
-                                        <h3 className="font-medium text-primary mb-2">{GDPR_REQUIREMENTS.find(c => c.id === criteriaId)?.label}</h3>
-                                        <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
-                                            {policyClauses[selectedPolicy.id][criteriaId] || "No specific clause found for this criteria."}
-                                        </p>
-                                    </div>
-                                ))
-                            )}
-                        </ScrollArea>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <div className="flex items-start">
+                                <Check className="w-5 h-5 text-green-500 mt-1 mr-2 flex-shrink-0" />
+                                <p className="text-sm">
+                                    Annotating your privacy policy with a detailed analysis of each section's purpose and compliance
+                                </p>
+                            </div>
+                        </div>
+                        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+                            <div className="flex items-start">
+                                <Check className="w-5 h-5 text-green-500 mt-1 mr-2 flex-shrink-0" />
+                                <p className="text-sm">
+                                    Checking against the 11 mandatory GDPR requirements for privacy notices as defined by <a href="https://gdpr.eu/privacy-notice/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">GDPR.eu</a>
+                                </p>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {/* Policy Input Section */}
                 <div className="bg-white rounded-lg shadow-lg p-6">
                     <h2 className="text-xl font-semibold mb-4 text-primary">Your Privacy Policy</h2>
                     <Textarea
@@ -322,6 +287,8 @@ export default function Component() {
                         )}
                     </Button>
                 </div>
+
+                {/* Analysis Results */}
                 {analysisResults.length > 0 && (
                     <div ref={resultsRef} className="bg-white rounded-lg shadow-lg p-6 mt-6">
                         <h2 className="text-xl font-semibold mb-4 text-primary">Annotated Policy</h2>
@@ -356,9 +323,11 @@ export default function Component() {
                         </div>
                     </div>
                 )}
+
+                {/* Regulatory Analysis */}
                 {regulatoryResults && (
                     <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-                        <h2 className="text-xl font-semibold mb-4 text-primary">Regulatory Analysis</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-primary">Discrete Requirements for Privacy Policy According to GDPR</h2>
                         <div className="space-y-6">
                             {regulatoryResults?.structured_analysis.map(({ question, segments }, index) => (
                                 <div key={index} className="border-b pb-4 last:border-b-0">
@@ -392,6 +361,37 @@ export default function Component() {
                         </div>
                     </div>
                 )}
+
+                {/* GDPR Compliance Summary - Moved to bottom */}
+                {regulatoryResults && (
+                    <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                        <h2 className="text-xl font-semibold mb-4 text-primary">GDPR Compliance Summary</h2>
+                        <Progress value={progressPercentage} className="mb-4" />
+                        <p className="text-sm text-gray-600 mb-4">
+                            {checkedItems.length} of {GDPR_REQUIREMENTS.length} criteria met
+                        </p>
+                        <ScrollArea className="h-[300px] rounded-lg border bg-white p-4">
+                            {GDPR_REQUIREMENTS.map((criteria) => (
+                                <div key={criteria.id} className="flex items-center space-x-2 mb-4">
+                                    <Checkbox
+                                        id={`checkbox-${criteria.id}`}
+                                        checked={checkedItems.includes(criteria.id)}
+                                        disabled={true}
+                                        className="border-primary"
+                                    />
+                                    <label
+                                        htmlFor={`checkbox-${criteria.id}`}
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        {criteria.label}
+                                    </label>
+                                </div>
+                            ))}
+                        </ScrollArea>
+                    </div>
+                )}
+
+                {/* Error Display */}
                 {error && (
                     <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
                         <strong className="font-bold">Error: </strong>
