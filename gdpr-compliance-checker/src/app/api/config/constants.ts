@@ -2,7 +2,7 @@ export const API_CONFIG = {
     ENDPOINTS: {
         SEGMENTER: process.env.NEXT_PUBLIC_SEGMENTER_URL || 'http://localhost:80/privacy-segmenter/invoke',
         ANALYZER: process.env.NEXT_PUBLIC_ANALYZER_URL || 'http://localhost:80/privacy-analyzer/invoke',
-        REGULATORY_CHECKER: process.env.NEXT_PUBLIC_REGULATORY_CHECKER_URL || 'http://localhost:80/privacy-regulatory-checker/invoke'
+        REGULATORY_CHECKER: 'http://localhost:80/gdpr-compliance/invoke'
     },
     MODEL: process.env.NEXT_PUBLIC_MODEL || 'gpt-4',
     TIMEOUT: parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000'),

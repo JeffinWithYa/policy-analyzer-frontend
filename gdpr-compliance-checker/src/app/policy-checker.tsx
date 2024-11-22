@@ -21,16 +21,19 @@ const policies = [
     { id: 3, name: "Premium Policy" },
 ]
 
-const gdprCriteria = [
-    { id: 1, label: "Lawful Basis for Processing" },
-    { id: 2, label: "Consent" },
-    { id: 3, label: "Data Subject Rights" },
-    { id: 4, label: "Privacy by Design" },
-    { id: 5, label: "Data Breach Notification" },
-    { id: 6, label: "Data Protection Officer" },
-    { id: 7, label: "International Data Transfers" },
-    { id: 8, label: "Records of Processing Activities" },
-]
+const GDPR_REQUIREMENTS = [
+    { id: 1, label: "Identity and Contact Details" },
+    { id: 2, label: "Purposes and Legal Basis" },
+    { id: 3, label: "Legitimate Interests" },
+    { id: 4, label: "Recipients of Data" },
+    { id: 5, label: "International Transfers" },
+    { id: 6, label: "Retention Period" },
+    { id: 7, label: "Data Subject Rights" },
+    { id: 8, label: "Consent Withdrawal" },
+    { id: 9, label: "Complaints Process" },
+    { id: 10, label: "Data Provision Requirements" },
+    { id: 11, label: "Automated Decision Making" }
+];
 
 const policyClauses = {
     1: {
@@ -94,20 +97,39 @@ interface AnalysisResult {
     privacy_analysis: any;
 }
 
-// Add new interface for regulatory check
+// Update the interface to match the actual response
 interface RegulatoryCheckResponse {
-    [question: string]: {
-        segment: string;
-        model_analysis: {
-            category: {
-                [key: string]: {
-                    [key: string]: string;
-                };
-            };
+    type: string;
+    content: string;
+    structured_analysis: {
+        question: string;
+        segments: {
+            segment: string;
+            category: string;
             explanation: string;
-        }[];
+        }[] | null;
     }[];
+    tool_calls: any[];
+    tool_call_id: string | null;
+    run_id: string;
+    response_metadata: any;
+    custom_data: any;
+    privacy_analysis: any;
 }
+
+const getMetCriteria = (regulatoryResults: RegulatoryCheckResponse | null): number[] => {
+    if (!regulatoryResults?.structured_analysis) return [];
+
+    const metCriteria: number[] = [];
+
+    regulatoryResults.structured_analysis.forEach(({ question, segments }, index) => {
+        if (segments && segments.length > 0) {
+            metCriteria.push(index + 1);
+        }
+    });
+
+    return metCriteria;
+};
 
 export default function Component() {
     const [selectedPolicy, setSelectedPolicy] = useState(policies[0])
@@ -125,6 +147,13 @@ export default function Component() {
         }
     }, [analysisResults])
 
+    useEffect(() => {
+        if (regulatoryResults) {
+            const metCriteria = getMetCriteria(regulatoryResults);
+            setCheckedItems(metCriteria);
+        }
+    }, [regulatoryResults]);
+
     const handlePolicyChange = (policyId: number) => {
         const newPolicy = policies.find(p => p.id === policyId)
         if (newPolicy) {
@@ -140,7 +169,7 @@ export default function Component() {
         )
     }
 
-    const progressPercentage = (checkedItems.length / gdprCriteria.length) * 100
+    const progressPercentage = (checkedItems.length / GDPR_REQUIREMENTS.length) * 100
 
     const handleAnalyzePolicy = async () => {
         if (!userPolicy.trim()) return
@@ -228,18 +257,18 @@ export default function Component() {
                     </DropdownMenu>
                     <Progress value={progressPercentage} className="mb-4" />
                     <p className="text-sm text-gray-600 mb-4">
-                        {checkedItems.length} of {gdprCriteria.length} criteria met
+                        {checkedItems.length} of {GDPR_REQUIREMENTS.length} criteria met
                     </p>
                 </div>
                 <div className="flex flex-col md:flex-row gap-6 mb-6">
                     <div className="w-full md:w-1/2">
                         <ScrollArea className="h-[500px] rounded-lg border bg-white p-4">
-                            {gdprCriteria.map((criteria) => (
+                            {GDPR_REQUIREMENTS.map((criteria) => (
                                 <div key={criteria.id} className="flex items-center space-x-2 mb-4">
                                     <Checkbox
                                         id={`checkbox-${criteria.id}`}
                                         checked={checkedItems.includes(criteria.id)}
-                                        onCheckedChange={() => handleCheckboxChange(criteria.id)}
+                                        disabled={true}
                                         className="border-primary"
                                     />
                                     <label
@@ -260,7 +289,7 @@ export default function Component() {
                             ) : (
                                 checkedItems.map((criteriaId) => (
                                     <div key={criteriaId} className="mb-6 last:mb-0">
-                                        <h3 className="font-medium text-primary mb-2">{gdprCriteria.find(c => c.id === criteriaId)?.label}</h3>
+                                        <h3 className="font-medium text-primary mb-2">{GDPR_REQUIREMENTS.find(c => c.id === criteriaId)?.label}</h3>
                                         <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">
                                             {policyClauses[selectedPolicy.id][criteriaId] || "No specific clause found for this criteria."}
                                         </p>
@@ -331,28 +360,32 @@ export default function Component() {
                     <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
                         <h2 className="text-xl font-semibold mb-4 text-primary">Regulatory Analysis</h2>
                         <div className="space-y-6">
-                            {Object.entries(regulatoryResults).map(([question, segments]) => (
-                                <div key={question} className="border-b pb-4 last:border-b-0">
+                            {regulatoryResults?.structured_analysis.map(({ question, segments }, index) => (
+                                <div key={index} className="border-b pb-4 last:border-b-0">
                                     <h3 className="font-medium text-lg mb-3">{question}</h3>
                                     <div className="space-y-3">
-                                        {segments.map((item, index) => {
-                                            const topLabel = getTopLevelLabel(item.model_analysis.category)
-                                            return (
-                                                <div
-                                                    key={index}
-                                                    className={cn(
-                                                        "p-3 rounded-md",
-                                                        labelColors[topLabel] || "bg-gray-100"
-                                                    )}
-                                                >
-                                                    <div className="text-sm text-gray-700">{item.segment}</div>
-                                                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
-                                                        <span>{topLabel}</span>
-                                                        <span className="italic">{item.model_analysis.explanation}</span>
+                                        {segments && segments.length > 0 ? (
+                                            segments.map((item, index) => {
+                                                const topLabel = getTopLevelLabel({ [item.category]: {} })
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className={cn(
+                                                            "p-3 rounded-md",
+                                                            labelColors[topLabel] || "bg-gray-100"
+                                                        )}
+                                                    >
+                                                        <div className="text-sm text-gray-700">{item.segment}</div>
+                                                        <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                                                            <span>{topLabel}</span>
+                                                            <span className="italic">{item.explanation}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )
-                                        })}
+                                                )
+                                            })
+                                        ) : (
+                                            <p className="text-sm text-gray-500">No relevant segments found.</p>
+                                        )}
                                     </div>
                                 </div>
                             ))}

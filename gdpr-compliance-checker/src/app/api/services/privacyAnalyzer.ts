@@ -26,7 +26,7 @@ export class PrivacyAnalyzerService {
             analysisResults = await this.analyzeSegments(segments, threadId);
 
             try {
-                regulatoryCheck = await this.checkRegulatory(analysisResults);
+                regulatoryCheck = await this.checkRegulatory(analysisResults, threadId);
             } catch (error) {
                 console.error('Regulatory check failed, continuing with partial results:', error);
             }
@@ -142,7 +142,10 @@ export class PrivacyAnalyzerService {
         );
     }
 
-    private async checkRegulatory(segments: SegmentAnalysis[]): Promise<RegulatoryCheckResponse> {
+    private async checkRegulatory(
+        segments: SegmentAnalysis[],
+        threadId: string
+    ): Promise<RegulatoryCheckResponse> {
         try {
             if (!segments.every(segment => segment.content)) {
                 throw new PrivacyAnalyzerError.badRequest('All segments must be analyzed before regulatory check');
@@ -164,14 +167,18 @@ export class PrivacyAnalyzerService {
                 }
             });
 
-            return withRetry(
+            const response = await withRetry(
                 async () => {
-                    const response = await fetch(API_CONFIG.ENDPOINTS.REGULATORY_CHECKER, {
+                    const response = await fetch('http://localhost:80/gdpr-compliance/invoke', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify({ privacy_segments }),
+                        body: JSON.stringify({
+                            message: JSON.stringify({ privacy_segments }),
+                            model: API_CONFIG.MODEL,
+                            thread_id: threadId
+                        }),
                         signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
                     });
 
@@ -184,11 +191,25 @@ export class PrivacyAnalyzerService {
                         throw new Error(`Regulatory check failed: ${response.status} - ${errorText}`);
                     }
 
-                    return response.json();
+                    const rawResponse = await response.json();
+                    const parsedContent = JSON.parse(rawResponse.content);
+
+                    // Transform the GDPR analysis into a more structured format
+                    const analysisResults = Object.entries(parsedContent.gdpr_analysis.results).map(([question, segments]) => ({
+                        question,
+                        segments: segments.length > 0 ? segments : null
+                    }));
+
+                    return {
+                        ...rawResponse,
+                        structured_analysis: analysisResults
+                    };
                 },
                 API_CONFIG.MAX_RETRIES,
                 API_CONFIG.RETRY_DELAY
             );
+
+            return response;
         } catch (error) {
             console.error('Regulatory check failed:', error);
             throw error;

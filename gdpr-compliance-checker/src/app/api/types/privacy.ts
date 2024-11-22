@@ -54,6 +54,41 @@ export interface SegmentWithAnalysis {
     };
 }
 
+interface AnalysisSegment {
+    text: string;
+    category: string;
+    explanation: string;
+}
+
+interface QuestionAnalysis {
+    question: string;
+    segments: AnalysisSegment[] | null;
+}
+
+interface GDPRSegment {
+    segment: string;
+    category: string;
+    explanation: string;
+}
+
+interface QuestionAnalysis {
+    question: string;
+    segments: GDPRSegment[] | null;
+}
+
+interface GDPRAnalysis {
+    status: string;
+    results: Record<string, GDPRSegment[]>;
+}
+
 export interface RegulatoryCheckResponse {
-    [question: string]: SegmentWithAnalysis[];
+    type: string;
+    content: string;
+    tool_calls: any[];
+    tool_call_id: string | null;
+    run_id: string;
+    response_metadata: Record<string, any>;
+    custom_data: Record<string, any>;
+    privacy_analysis: any;
+    structured_analysis: QuestionAnalysis[];
 } 
