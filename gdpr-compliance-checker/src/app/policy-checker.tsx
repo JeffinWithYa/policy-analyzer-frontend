@@ -235,20 +235,20 @@ export default function Component() {
                 {/* Title Section */}
                 <div className="flex items-center justify-center mb-4">
                     <Shield className="w-10 h-10 text-primary mr-2" />
-                    <h1 className="text-3xl font-bold text-primary">GDPR Policy Compliance Checker</h1>
+                    <h1 className="text-3xl font-bold text-primary">Privacy Policy Annotations & Compliance Checker</h1>
                 </div>
 
                 {/* New Description Section */}
                 <div className="text-center mb-8 max-w-2xl mx-auto">
                     <p className="text-gray-600 mb-4">
-                        This tool helps you ensure your privacy policy complies with GDPR requirements by:
+                        This tool annotates your privacy policy to help simplify the understanding of your privacy rights, and also helps ensure that the privacy policy complies with GDPR requirements.
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
                             <div className="flex items-start">
                                 <Check className="w-5 h-5 text-green-500 mt-1 mr-2 flex-shrink-0" />
                                 <p className="text-sm">
-                                    Annotating your privacy policy with a detailed analysis of each section's purpose and compliance
+                                    Annotate your privacy policy with a detailed analysis of each section's purpose and compliance
                                 </p>
                             </div>
                         </div>
@@ -256,7 +256,7 @@ export default function Component() {
                             <div className="flex items-start">
                                 <Check className="w-5 h-5 text-green-500 mt-1 mr-2 flex-shrink-0" />
                                 <p className="text-sm">
-                                    Checking against the 11 mandatory GDPR requirements for privacy notices as defined by <a href="https://gdpr.eu/privacy-notice/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">GDPR.eu</a>
+                                    Check against the 11 mandatory GDPR requirements for privacy notices as defined by <a href="https://gdpr.eu/privacy-notice/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">GDPR.eu</a>
                                 </p>
                             </div>
                         </div>
