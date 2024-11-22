@@ -6,25 +6,36 @@ import type {
     SegmentResponse,
     PolicySegment,
     SegmentAnalysis,
-    PrivacyAnalysis
+    PrivacyAnalysis,
+    RegulatoryCheckResponse
 } from '../types/privacy'
 
 export class PrivacyAnalyzerService {
-    async analyzePolicy(policyText: string): Promise<PrivacyAnalysis> {
+    async analyzePolicy(policyText: string): Promise<Partial<PrivacyAnalysis & { regulatory_check: RegulatoryCheckResponse }>> {
         if (!policyText?.trim()) {
             throw PrivacyAnalyzerError.badRequest('Policy text is required');
         }
 
         const threadId = uuidv4();
+        let segments: PolicySegment[] = [];
+        let analysisResults: SegmentAnalysis[] = [];
+        let regulatoryCheck: RegulatoryCheckResponse | null = null;
 
         try {
-            const segments = await this.segmentPolicy(policyText, threadId);
-            const analysisResults = await this.analyzeSegments(segments, threadId);
+            segments = await this.segmentPolicy(policyText, threadId);
+            analysisResults = await this.analyzeSegments(segments, threadId);
+
+            try {
+                regulatoryCheck = await this.checkRegulatory(analysisResults);
+            } catch (error) {
+                console.error('Regulatory check failed, continuing with partial results:', error);
+            }
 
             return {
                 threadId,
                 segments,
-                analysis: analysisResults
+                analysis: analysisResults,
+                ...(regulatoryCheck && { regulatory_check: regulatoryCheck })
             };
         } catch (error) {
             console.error('Policy analysis failed:', error);
@@ -39,31 +50,49 @@ export class PrivacyAnalyzerService {
         policyText: string,
         threadId: string
     ): Promise<PolicySegment[]> {
-        return withRetry(
-            async () => {
-                const response = await fetch(API_CONFIG.ENDPOINTS.SEGMENTER, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: policyText,
-                        model: API_CONFIG.MODEL,
-                        thread_id: threadId
-                    }),
-                    signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
-                });
+        try {
+            return withRetry(
+                async () => {
+                    try {
+                        const response = await fetch(API_CONFIG.ENDPOINTS.SEGMENTER, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                message: policyText,
+                                model: API_CONFIG.MODEL,
+                                thread_id: threadId
+                            }),
+                            signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+                        });
 
-                if (!response.ok) {
-                    throw new Error(`Segmentation failed with status: ${response.status}`);
-                }
+                        if (!response.ok) {
+                            throw new Error(`Segmentation failed with status: ${response.status}`);
+                        }
 
-                const data: SegmentResponse = await response.json();
-                return JSON.parse(data.content);
-            },
-            API_CONFIG.MAX_RETRIES,
-            API_CONFIG.RETRY_DELAY
-        );
+                        const data: SegmentResponse = await response.json();
+                        return JSON.parse(data.content);
+                    } catch (error) {
+                        if (error instanceof TypeError && error.message.includes('fetch failed')) {
+                            throw new PrivacyAnalyzerError.serviceError(
+                                'Unable to connect to segmentation service. Please ensure the service is running.',
+                                error
+                            );
+                        }
+                        throw error;
+                    }
+                },
+                API_CONFIG.MAX_RETRIES,
+                API_CONFIG.RETRY_DELAY
+            );
+        } catch (error) {
+            console.error('Segmentation failed:', error);
+            throw new PrivacyAnalyzerError.serviceError(
+                'Failed to segment policy. Please check if all required services are running.',
+                error
+            );
+        }
     }
 
     private async analyzeSegments(
@@ -111,5 +140,58 @@ export class PrivacyAnalyzerService {
             API_CONFIG.MAX_RETRIES,
             API_CONFIG.RETRY_DELAY
         );
+    }
+
+    private async checkRegulatory(segments: SegmentAnalysis[]): Promise<RegulatoryCheckResponse> {
+        try {
+            if (!segments.every(segment => segment.content)) {
+                throw new PrivacyAnalyzerError.badRequest('All segments must be analyzed before regulatory check');
+            }
+
+            const privacy_segments = segments.map(segment => {
+                try {
+                    const parsedContent = JSON.parse(segment.content);
+                    return {
+                        segment: segment.segment_text,
+                        model_analysis: {
+                            category: parsedContent.category,
+                            explanation: parsedContent.explanation
+                        }
+                    };
+                } catch (error) {
+                    console.error('Failed to parse segment content:', error);
+                    throw new PrivacyAnalyzerError.serviceError('Invalid segment analysis format', error);
+                }
+            });
+
+            return withRetry(
+                async () => {
+                    const response = await fetch(API_CONFIG.ENDPOINTS.REGULATORY_CHECKER, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ privacy_segments }),
+                        signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+                    });
+
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Regulatory checker error:', {
+                            status: response.status,
+                            body: errorText
+                        });
+                        throw new Error(`Regulatory check failed: ${response.status} - ${errorText}`);
+                    }
+
+                    return response.json();
+                },
+                API_CONFIG.MAX_RETRIES,
+                API_CONFIG.RETRY_DELAY
+            );
+        } catch (error) {
+            console.error('Regulatory check failed:', error);
+            throw error;
+        }
     }
 } 

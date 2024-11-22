@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Check, Shield, ChevronDown, Loader2 } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -94,12 +94,36 @@ interface AnalysisResult {
     privacy_analysis: any;
 }
 
+// Add new interface for regulatory check
+interface RegulatoryCheckResponse {
+    [question: string]: {
+        segment: string;
+        model_analysis: {
+            category: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            explanation: string;
+        }[];
+    }[];
+}
+
 export default function Component() {
     const [selectedPolicy, setSelectedPolicy] = useState(policies[0])
     const [checkedItems, setCheckedItems] = useState<number[]>([])
     const [userPolicy, setUserPolicy] = useState('')
     const [isAnalyzing, setIsAnalyzing] = useState(false)
     const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([])
+    const [regulatoryResults, setRegulatoryResults] = useState<RegulatoryCheckResponse | null>(null)
+    const [error, setError] = useState<string | null>(null)
+    const resultsRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (analysisResults.length > 0 && resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth' })
+        }
+    }, [analysisResults])
 
     const handlePolicyChange = (policyId: number) => {
         const newPolicy = policies.find(p => p.id === policyId)
@@ -122,6 +146,10 @@ export default function Component() {
         if (!userPolicy.trim()) return
 
         setIsAnalyzing(true)
+        setAnalysisResults([])
+        setRegulatoryResults(null)
+        setError(null)
+
         try {
             const response = await fetch('/api/analyze', {
                 method: 'POST',
@@ -131,17 +159,30 @@ export default function Component() {
                 body: JSON.stringify({ policyText: userPolicy })
             })
 
+            const data = await response.json()
+
             if (!response.ok) {
-                throw new Error('Analysis failed')
+                console.error('Error response:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data
+                })
+
+                const errorMessage = data.error || 'Failed to analyze policy. Please try again.'
+                setError(errorMessage)
+                return
             }
 
-            const data = await response.json()
-            console.log('Analysis complete:', data)
-            console.log('Analysis results structure:', JSON.stringify(data.analysis, null, 2))
+            if (!data.analysis) {
+                throw new Error('No analysis data received')
+            }
+
             setAnalysisResults(data.analysis)
+            setRegulatoryResults(data.regulatory_check)
 
         } catch (error) {
             console.error('Failed to analyze policy:', error)
+            setError('An unexpected error occurred. Please try again later.')
         } finally {
             setIsAnalyzing(false)
         }
@@ -253,8 +294,8 @@ export default function Component() {
                     </Button>
                 </div>
                 {analysisResults.length > 0 && (
-                    <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-                        <h2 className="text-xl font-semibold mb-4 text-primary">Analysis Results</h2>
+                    <div ref={resultsRef} className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                        <h2 className="text-xl font-semibold mb-4 text-primary">Annotated Policy</h2>
                         <div className="space-y-2">
                             {analysisResults.map((result, index) => {
                                 const parsedContent = JSON.parse(result.content);
@@ -284,6 +325,44 @@ export default function Component() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+                {regulatoryResults && (
+                    <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
+                        <h2 className="text-xl font-semibold mb-4 text-primary">Regulatory Analysis</h2>
+                        <div className="space-y-6">
+                            {Object.entries(regulatoryResults).map(([question, segments]) => (
+                                <div key={question} className="border-b pb-4 last:border-b-0">
+                                    <h3 className="font-medium text-lg mb-3">{question}</h3>
+                                    <div className="space-y-3">
+                                        {segments.map((item, index) => {
+                                            const topLabel = getTopLevelLabel(item.model_analysis.category)
+                                            return (
+                                                <div
+                                                    key={index}
+                                                    className={cn(
+                                                        "p-3 rounded-md",
+                                                        labelColors[topLabel] || "bg-gray-100"
+                                                    )}
+                                                >
+                                                    <div className="text-sm text-gray-700">{item.segment}</div>
+                                                    <div className="flex justify-between items-center mt-2 text-xs text-gray-500">
+                                                        <span>{topLabel}</span>
+                                                        <span className="italic">{item.model_analysis.explanation}</span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+                {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <strong className="font-bold">Error: </strong>
+                        <span className="block sm:inline">{error}</span>
                     </div>
                 )}
             </div>

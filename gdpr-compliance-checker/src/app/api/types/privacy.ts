@@ -40,4 +40,20 @@ export interface PrivacyAnalysis {
     threadId: string;
     segments: PolicySegment[];
     analysis: SegmentAnalysis[];
+}
+
+export interface SegmentWithAnalysis {
+    segment: string;
+    model_analysis: {
+        category: {
+            [key: string]: {
+                [key: string]: string;
+            };
+        };
+        explanation: string;
+    };
+}
+
+export interface RegulatoryCheckResponse {
+    [question: string]: SegmentWithAnalysis[];
 } 
