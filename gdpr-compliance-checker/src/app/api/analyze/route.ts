@@ -4,6 +4,9 @@ import { PrivacyAnalyzerError } from '../errors/PrivacyAnalyzerError'
 
 const analyzerService = new PrivacyAnalyzerService()
 
+export const runtime = 'edge'
+export const maxDuration = 300
+
 export async function POST(request: Request) {
     try {
         const body = await request.json()
@@ -13,6 +16,16 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: 'Policy text is required' },
                 { status: 400 }
+            )
+        }
+
+        if (body.policyText.length > 50000) {
+            return NextResponse.json(
+                {
+                    error: 'Policy text is too large',
+                    details: 'Please submit a shorter privacy policy or split it into smaller segments'
+                },
+                { status: 413 }
             )
         }
 

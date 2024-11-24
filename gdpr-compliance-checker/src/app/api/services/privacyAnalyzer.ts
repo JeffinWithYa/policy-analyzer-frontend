@@ -10,6 +10,9 @@ import type {
     RegulatoryCheckResponse
 } from '../types/privacy'
 
+// Add longer timeout for larger documents
+const EXTENDED_TIMEOUT = 180000; // 3 minutes in milliseconds
+
 export class PrivacyAnalyzerService {
     async analyzePolicy(policyText: string): Promise<Partial<PrivacyAnalysis & { regulatory_check: RegulatoryCheckResponse }>> {
         if (!policyText?.trim()) {
@@ -64,7 +67,8 @@ export class PrivacyAnalyzerService {
                                 model: API_CONFIG.MODEL,
                                 thread_id: threadId
                             }),
-                            signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+                            // Increase timeout for segmentation specifically
+                            signal: AbortSignal.timeout(EXTENDED_TIMEOUT)
                         });
 
                         if (!response.ok) {
@@ -124,7 +128,8 @@ export class PrivacyAnalyzerService {
                         model: API_CONFIG.MODEL,
                         thread_id: threadId
                     }),
-                    signal: AbortSignal.timeout(API_CONFIG.TIMEOUT)
+                    // Increase timeout for analysis
+                    signal: AbortSignal.timeout(EXTENDED_TIMEOUT)
                 });
 
                 if (!response.ok) {
