@@ -23,8 +23,11 @@ A modern web application built with Next.js that helps analyze privacy policies 
 1. Clone the repository:
 
 ```bash
+npm install react react-dom next
 npm run dev
 # or
+yarn install
+yarn add react react-dom next
 yarn dev
 # or
 pnpm dev
