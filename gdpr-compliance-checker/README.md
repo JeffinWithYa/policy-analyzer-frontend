@@ -23,16 +23,13 @@ A modern web application built with Next.js that helps analyze privacy policies 
 1. Clone the repository:
 
 ```bash
-npm install react react-dom next
+cd gdpr-compliance-checker
+npm install 
 npm run dev
 # or
+cd gdpr-compliance-checker
 yarn install
-yarn add react react-dom next
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
